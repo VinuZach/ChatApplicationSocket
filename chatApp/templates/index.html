@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+    .chat_item
+    {
+        margin: 20px;
+     }
+
+
+    </style>
+</head>
+<script>
+      const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/chat/chatList'
+
+        );
+
+        	chatSocket.addEventListener("open", function(e){
+			console.log("ChatSocket OPEN")
+			// join chat room
+			if("{{request.user.is_authenticated}}"){
+				chatSocket.send(JSON.stringify({
+				    'user': "{{request.user}}"
+				}));
+			}
+		})
+
+		  chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+
+            if(data.Chat_Type=='refresh')
+            {
+
+                if("{{request.user.is_authenticated}}"){
+                        console.log("ddddd")
+                    chatSocket.send(JSON.stringify({
+                        "command": "refresh",
+                        'user': "{{request.user}}"
+                    }));
+                }
+            }
+            else
+            if(data.Chat_Type=='updated_chatlist')
+            {
+
+            const currentUser="{{request.user}}"
+            console.log(data.chatRoomWithTotalMessage)
+<!--           for (let i = 0; i < data.chatRoomWithTotalMessage.length; i++)-->
+<!--            {-->
+<!--             console.log(data.chatRoomWithTotalMessage[i].roomName)-->
+<!--            }-->
+            }
+
+        };
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+
+</script>
+<body>
+
+{% if request.user.is_authenticated %}
+{% if chatRoomWithTotalMessage|length > 0 %}
+<table>
+    <thead>Chat Rooms</thead>
+
+    {% for chatroom in chatRoomWithTotalMessage %}
+    <tr onclick="location.href = '{% url 'rooms' chatroom.room.id  %}'" style="background: #e5e5e5;">
+        <td>
+        <div class="chat_item">
+            {{chatroom.room.roomName}}
+
+        </div>
+        </td>
+        <td>
+              {{chatroom.totalMessages}}
+        </td>
+    </tr>
+
+    {% endfor%}
+
+</table>
+
+<!--<div style="border: 1px black solid;-->
+<!--    padding: 21px;-->
+<!--    width: 30%;">-->
+<!--    <div style="display: flex;-->
+<!--    justify-content: space-between;    flex-direction: row;">-->
+<!--        <label>chatroom name</label>-->
+<!--        <label style="">messageCount </label>-->
+<!--    </div>-->
+<!--</div>-->
+{% else %}
+No chat rooms
+{% endif %}
+{% else %}
+User not logged in
+{% endif %}
+</body>
+</html>

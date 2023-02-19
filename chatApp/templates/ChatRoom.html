@@ -1,0 +1,188 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Chat Room</title>
+</head>
+<style>
+    #messg_recieved
+    {
+    background: #dfdb56;
+    min-width: 77px;
+    padding: 7px 15px 3px 12px;
+    border-radius: 4px;
+    display: none;
+    justify-content: flex-start;
+    flex-direction: column;
+    width: fit-content;
+    justify-content: flex-start;
+    margin: 5px;
+    }
+
+    #messg_send{
+    background: #b792e7;
+    width: fit-content;
+    align-self: end;
+    margin: 5px;
+    padding: 7px 15px 3px 12px;
+    min-width: 77px;
+    display: none;
+    }
+
+
+</style>
+<body>
+
+
+<div id="chat_parent" style="width: 40%;height:50%; overflow-y: scroll;display: flex;flex-direction: column-reverse;">
+
+    <div id="messg_recieved">
+        <span id="user_name" style="white-space: pre-line;font-variant: petite-caps;">user</span>
+        <span id="message_rec">message receieved</span>
+    </div>
+    <div id="messg_send">
+        <span id="message_">message receieved</span>
+    </div>
+</div>
+
+<input id="chat-message-input" type="text" size="100"><br>
+<input id="chat-message-submit" type="button" value="Send" onclick="hello('{{user}}')">
+{{ room_name|json_script:"room-name" }}
+
+<script>
+
+
+ var chatParent= document.getElementById('chat_parent')
+chatParent.addEventListener(
+    'scroll',
+    function()
+    {
+
+        var scrollTop = chatParent.scrollTop;
+        var scrollHeight = chatParent.scrollHeight; // added
+        var offsetHeight = chatParent.offsetHeight;
+        var contentHeight = scrollHeight - offsetHeight; // added
+
+
+        if (contentHeight <= Math.abs(scrollTop-30)) // modified
+        {
+      	chatSocket.send(JSON.stringify({
+					"command": "join",
+				    'message': "",
+				    'user': "{{request.user}}",
+				    "pageNumber":currentPageNumber
+				}));
+        }
+
+    },
+    false
+);
+        const CHAT_STATUS={
+            OffLine:"offline",
+            JOINED :"Joined",
+
+
+        }
+
+
+        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+        var current_chat_Status=CHAT_STATUS.OffLine
+        var currentPageNumber=0
+        const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/chat/'
+            + roomName
+            + '/'
+        );
+
+
+	chatSocket.addEventListener("open", function(e){
+			console.log("ChatSocket OPEN")
+			// join chat room
+			if("{{request.user.is_authenticated}}"){
+				chatSocket.send(JSON.stringify({
+					"command": "join",
+				    'message': "",
+				    'user': "{{request.user}}",
+				    "pageNumber":currentPageNumber
+				}));
+			}
+		})
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const currentUser="{{request.user}}"
+
+            if(data.message.length>0)
+               document.querySelector('#chat_parent').insertBefore(displayMessages(document.querySelector('#chat_parent'),data.message,data.user),document.querySelector('#chat_parent').firstChild)
+
+            if(currentPageNumber<data.new_page_number)
+            if(data.prevMessages.length>0)
+            {
+                currentPageNumber=data.new_page_number
+                const prevMessage =data.prevMessages
+                for (let i = 0; i < prevMessage.length; i++)
+               document.querySelector('#chat_parent').append( displayMessages(document.querySelector('#chat_parent'),prevMessage[i].message,prevMessage[i].user))
+            }
+
+
+
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        document.querySelector('#chat-message-input').focus();
+        document.querySelector('#chat-message-input').onkeyup = function(e) {
+            if (e.keyCode === 13) {  // enter, return
+                document.querySelector('#chat-message-submit').click();
+            }
+        };
+
+
+       function displayMessages(parentElement,message,sender_user)
+       {
+             let message_container;
+             if(sender_user==("{{request.user}}"))
+             {
+                const chatItem=document.querySelector("#messg_send")
+                 clone = chatItem.cloneNode(true);
+                 clone.querySelector("#message_").innerHTML=message
+                 clone.style.display ="flex"
+             }
+             else
+             {
+              const chatItem=document.querySelector("#messg_recieved")
+              clone = chatItem.cloneNode(true);
+              clone.querySelector("#message_rec").innerHTML=message
+              clone.querySelector("#user_name").innerHTML=sender_user
+              clone.style.display ="flex"
+             }
+
+              return clone
+       }
+
+        function hello(currentUser)
+        {
+
+           const messageInputDom = document.querySelector('#chat-message-input');
+           const message = messageInputDom.value;
+
+            chatSocket.send(JSON.stringify({
+                "command": "content",
+                'message': message,
+                'user': currentUser,
+                "pageNumber":currentPageNumber
+            }));
+            messageInputDom.value = '';
+        }
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
