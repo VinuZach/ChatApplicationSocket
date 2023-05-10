@@ -4,22 +4,46 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <style>
+    .groupChat_container
+    {
+        width: 7em;
+    background: blue;
+    height: 2em;
+
+    }
     .chat_item
     {
-        margin: 20px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        background:#ddd2d2;
+        padding:10px 20px;
      }
 
-
+    .draggable
+    {
+    cursor:move;
+    }
+    .draggable.dragging
+    {
+    opacity:.5;
+    }
+    .chatRoom_container
+    {
+        min-height: 4em;
+        padding: 10px;
+        border-style: solid;
+        border-width: thin;
+    }
+    .chatGroupRoom_container
+    {
+        padding: 20px;
+    }
     </style>
 </head>
 <script>
-      const chatSocket = new WebSocket(
-            'ws://'
-            + window.location.host
-            + '/ws/chat/chatList'
 
-        );
 
+      const chatSocket = new WebSocket('ws://'+ window.location.host + '/ws/chat/chatList');
         	chatSocket.addEventListener("open", function(e){
 			console.log("ChatSocket OPEN")
 			// join chat room
@@ -37,7 +61,7 @@
             {
 
                 if("{{request.user.is_authenticated}}"){
-                        console.log("ddddd")
+                    console.log("ddddd")
                     chatSocket.send(JSON.stringify({
                         "command": "refresh",
                         'user': "{{request.user}}"
@@ -47,13 +71,7 @@
             else
             if(data.Chat_Type=='updated_chatlist')
             {
-
-            const currentUser="{{request.user}}"
-            console.log(data.chatRoomWithTotalMessage)
-<!--           for (let i = 0; i < data.chatRoomWithTotalMessage.length; i++)-->
-<!--            {-->
-<!--             console.log(data.chatRoomWithTotalMessage[i].roomName)-->
-<!--            }-->
+               displayChatRoomList(data)
             }
 
         };
@@ -61,44 +79,102 @@
             console.error('Chat socket closed unexpectedly');
         };
 
+function displayChatRoomList(data)
+{
+        const currentUser="{{request.user}}"
+            console.log(data.chatRoomWithTotalMessage)
+            var chat_container=document.getElementById("chat_container")
+               var child = chat_container.lastElementChild;
+
+        while (child) {
+            chat_container.removeChild(child);
+            child = chat_container.lastElementChild;
+        }
+        var table = document.getElementById('table');
+               for (let i = 0; i < data.chatRoomWithTotalMessage.length; i++)
+                {
+                var row = table.insertRow(i);
+
+                row.classList.add("chat_item");
+                row.classList.add("draggable");
+
+                row.draggable=true
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+
+
+                var url_mask = "location.href = '{% url 'rooms' "12345" %}'".replace("12345", data.chatRoomWithTotalMessage[i].roomID);
+                row.setAttribute("onclick",url_mask);
+                cell1.innerHTML = data.chatRoomWithTotalMessage[i].roomName;
+                cell2.innerHTML = data.chatRoomWithTotalMessage[i].totalMessages;
+
+                }
+        setUpDraggingFunctionality()
+}
+
+function setUpDraggingFunctionality()
+{
+const draggableItems=document.querySelectorAll('.draggable')
+const draggableContainers=document.querySelectorAll('.chatRoom_container')
+draggableItems.forEach(draggableItem=>
+    {
+        draggableItem.addEventListener('dragstart',()=>
+            {
+                draggableItem.classList.add("dragging");
+            })
+
+         draggableItem.addEventListener('dragend',()=>
+            {
+                draggableItem.classList.remove("dragging");
+            })
+    })
+
+draggableContainers.forEach(containerItem =>{
+    containerItem.addEventListener('dragover',e=>
+    {
+      e.preventDefault()
+      const currentDraggingElement=document.querySelector('.dragging')
+
+  containerItem.append(currentDraggingElement)
+      currentDraggingElement.addEventListener('dragend',e=>
+        {
+          if(currentDraggingElement.parentElement.classList.contains("chatGroupRoom_container"))
+            {
+              const chatDataItems=currentDraggingElement.getElementsByTagName('td')
+              console.log(chatDataItems[0].innerHTML)
+              console.log(chatDataItems[1].innerHTML)
+              e.stopImmediatePropagation();
+            console.log(currentDraggingElement.parentElement.classList)
+
+            }
+
+
+        })
+    })
+})
+
+
+}
+
+
 
 </script>
 <body>
 
 {% if request.user.is_authenticated %}
-{% if chatRoomWithTotalMessage|length > 0 %}
-<table>
-    <thead>Chat Rooms</thead>
 
-    {% for chatroom in chatRoomWithTotalMessage %}
-    <tr onclick="location.href = '{% url 'rooms' chatroom.room.id  %}'" style="background: #e5e5e5;">
-        <td>
-        <div class="chat_item">
-            {{chatroom.room.roomName}}
 
-        </div>
-        </td>
-        <td>
-              {{chatroom.totalMessages}}
-        </td>
-    </tr>
+    <div class="chatRoom_container chatGroupRoom_container">
 
-    {% endfor%}
+    </div>
 
+<div>
+<table id="table" cellspacing="0" class="chatRoom_container" cellpadding="10" style="  border-collapse: separate;    border-spacing: 0 5px; width: 100%;     background: aqua; ">
+    <tbody id="chat_container"  style="cursor: pointer; ">
+
+    </tbody>
 </table>
-
-<!--<div style="border: 1px black solid;-->
-<!--    padding: 21px;-->
-<!--    width: 30%;">-->
-<!--    <div style="display: flex;-->
-<!--    justify-content: space-between;    flex-direction: row;">-->
-<!--        <label>chatroom name</label>-->
-<!--        <label style="">messageCount </label>-->
-<!--    </div>-->
-<!--</div>-->
-{% else %}
-No chat rooms
-{% endif %}
+</div>
 {% else %}
 User not logged in
 {% endif %}

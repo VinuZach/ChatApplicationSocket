@@ -139,13 +139,16 @@ class RoomListConsumer(WebsocketConsumer):
         self.accept()
 
     def chat_List(self, event):
-        print("chat chat_List")
-        user = event['user']
+        print("chat chat_List ")
+        print(self.scope["user"])
+
+        user = self.scope["user"]
+
         # Send message to WebSocket
         self.send(text_data=json.dumps({
             'chatRoomWithTotalMessage': retrieveChatList(user),
             "Chat_Type": "updated_chatlist",
-            'user': user
+
         }))
 
     def refresh_chat_List(self, event):
@@ -174,8 +177,8 @@ class RoomListConsumer(WebsocketConsumer):
 
 
 def retrieveChatList(user):
-    print(user)
     chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user))
+
     chatRoomWithTotalMessage = list(map(getMessageCountByRoomId, chatRoomListOfUsers))
     return sorted(chatRoomWithTotalMessage, key=lambda d: d["totalMessages"], reverse=True)
 
@@ -200,7 +203,7 @@ class ChatListWithMessageCount:
         self.totalMessage = totalMessage
 
     def __str__(self):
-        return {"room": self.roomId,
+        return {"roomID": self.roomId,
                 "roomName": self.roomName,
                 "totalMessages": self.totalMessage}
 
