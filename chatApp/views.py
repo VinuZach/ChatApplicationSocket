@@ -16,7 +16,9 @@ def index(request):
 
 
 def getMessageCountByRoomId(roomid):
-    chatRoom = ChartRoomList.objects.all().filter(roomName=roomid)[0]
+    print("getMessageCountByRoomId")
+    print(roomid)
+    chatRoom = ChartRoomList.objects.all().filter(id=roomid.id)[0]
     return {"room": roomid, "totalMessages": PublicRoomChatMessage.objects.by_room(chatRoom).count()}
 
 

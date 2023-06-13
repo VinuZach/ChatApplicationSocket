@@ -39,6 +39,7 @@ class ChatConsumer(WebsocketConsumer):
         pageNumber = text_data_json['pageNumber']
         print(command)
         # Send message to room group
+        print("create_room_chat_message  111")
         create_room_chat_message(self.room_name, user, message)
         if command != "join":
             async_to_sync(self.channel_layer.group_send)(
@@ -87,7 +88,9 @@ class ChatConsumer(WebsocketConsumer):
 
 
 def create_room_chat_message(room, user, message):
-    chatRoom = ChartRoomList.objects.get_or_create(roomName=room)[0]
+    print("create_room_chat_message")
+    print(str(room))
+    chatRoom = ChartRoomList.objects.all().filter(id=room)[0]
     if ALL_CHAT_ROOMS != room:
         if len(message) != 0:
             PublicRoomChatMessage.objects.create(user=User.objects.get(email=user), room=chatRoom,
@@ -97,7 +100,9 @@ def create_room_chat_message(room, user, message):
 def get_room_chat_messages(room, page_number):
     new_page_number = int(page_number)
     try:
-        chatRoom = ChartRoomList.objects.get_or_create(roomName=room)[0]
+        print("get_room_chat_messages")
+        print(str(room))
+        chatRoom = ChartRoomList.objects.all().filter(id=room)[0]
         qs = PublicRoomChatMessage.objects.by_room(chatRoom)
         p = Paginator(qs, 13)
         if new_page_number <= p.num_pages:
@@ -163,7 +168,8 @@ class RoomListConsumer(WebsocketConsumer):
             self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
-        create_room_chat_message(self.room_name, None, None)
+        print("create_room_chat_message 222")
+        #create_room_chat_message(self.room_name, None, None)
         text_data_json = json.loads(text_data)
         user = text_data_json['user']
         print("inside chatroom ")
@@ -184,7 +190,7 @@ def retrieveChatList(user):
 
 
 def getMessageCountByRoomId(roomid):
-    chatRoom = ChartRoomList.objects.filter(roomName=roomid)[0]
+    chatRoom = ChartRoomList.objects.all().filter(id=roomid.id)[0]
     chatWithCount = ChatListWithMessageCount()
     chatWithCount.roomName = roomid.roomName
     chatWithCount.totalMessage = PublicRoomChatMessage.objects.by_room(chatRoom).count()

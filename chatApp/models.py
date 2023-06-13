@@ -4,10 +4,16 @@ from django.contrib.auth.models import User
 
 # Create your models here.
 
+class GroupClusterList(models.Model):
+    clusterName = models.TextField(unique=True,
+                                   default="Cluster " + str((lambda: GroupClusterList.objects.latest('id').serial + 1)))
+    clusterChatCount = models.IntegerField(default=0)
+
 
 class ChartRoomList(models.Model):
     roomName = models.CharField(max_length=255, unique=False, blank=False)
     userList = models.ManyToManyField(User, help_text="authorised users")
+    #clusterGroupId = models.ForeignKey(GroupClusterList, on_delete=models.SET_NULL, null=True, default=None,blank=True)
 
     def __str__(self):
         return str(self.id)
@@ -15,6 +21,9 @@ class ChartRoomList(models.Model):
 
 class PublicRoomChatMessageManager(models.Manager):
     def by_room(self, room):
+        print("asdasdasd")
+        print(room)
+        print(PublicRoomChatMessage.objects.filter(room=room).order_by("-id"))
         qs = PublicRoomChatMessage.objects.filter(room=room).order_by("-id")
 
         return qs
