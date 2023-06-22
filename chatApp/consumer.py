@@ -4,6 +4,7 @@ from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 from django.core.paginator import Paginator
 from django.core.serializers.python import Serializer
+from django.db.models import QuerySet
 
 from .models import *
 
@@ -145,13 +146,17 @@ class RoomListConsumer(WebsocketConsumer):
 
     def chat_List(self, event):
         print("chat chat_List ")
-        print(self.scope["user"])
+        print(event['clusterId'])
 
         user = self.scope["user"]
-
+        try:
+            clusterId = event['clusterId']
+        except:
+            clusterId = -1
         # Send message to WebSocket
         self.send(text_data=json.dumps({
-            'chatRoomWithTotalMessage': retrieveChatList(user),
+            'chatRoomWithTotalMessage': retrieveChatList(user, clusterId),
+            'clusterRoomGroups': retrieveGroupList(user),
             "Chat_Type": "updated_chatlist",
 
         }))
@@ -168,25 +173,52 @@ class RoomListConsumer(WebsocketConsumer):
             self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
-        print("create_room_chat_message 222")
-        #create_room_chat_message(self.room_name, None, None)
         text_data_json = json.loads(text_data)
         user = text_data_json['user']
+        clusterId = text_data_json['clusterId']
         print("inside chatroom ")
+        print(clusterId)
         async_to_sync(self.channel_layer.group_send)(
             self.room_group_name,
             {
                 'type': 'chat_List',
                 'user': user,
+                'clusterId': str(clusterId),
             }
         )
 
 
-def retrieveChatList(user):
-    chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user))
+def retrieveGroupList(user):
+    chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user),
+                                                       clusterGroupId__isnull=False).order_by('-clusterGroupId__clusterChatCount')
 
+    chatRoomWithTotalMessage = list(map(getMessageCountForGroup, chatRoomListOfUsers))
+    return chatRoomWithTotalMessage
+
+
+def retrieveChatList(user, clusterId):
+    print("retrieveChatList")
+    print(clusterId)
+    if clusterId != "-1":
+        print("asdsadsad")
+        chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user),
+                                                           clusterGroupId=GroupClusterList.objects.get(id=clusterId),
+                                                           clusterGroupId__isnull=False)
+    else:
+        chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user),
+                                                           clusterGroupId__isnull=True)
     chatRoomWithTotalMessage = list(map(getMessageCountByRoomId, chatRoomListOfUsers))
     return sorted(chatRoomWithTotalMessage, key=lambda d: d["totalMessages"], reverse=True)
+
+
+def getMessageCountForGroup(roomid):
+    chatRoom = ChartRoomList.objects.all().filter(id=roomid.id)[0]
+    chatWithCount = ChatListWithMessageCount()
+    chatWithCount.roomName = str(GroupClusterList.objects.get(id=str(roomid.clusterGroupId)).clusterName)
+    chatWithCount.totalMessage = PublicRoomChatMessage.objects.by_room(chatRoom).count()
+    chatWithCount.roomId = roomid.id
+    chatWithCount.clusterGroupId = str(roomid.clusterGroupId)
+    return chatWithCount.__str__()
 
 
 def getMessageCountByRoomId(roomid):
@@ -195,6 +227,7 @@ def getMessageCountByRoomId(roomid):
     chatWithCount.roomName = roomid.roomName
     chatWithCount.totalMessage = PublicRoomChatMessage.objects.by_room(chatRoom).count()
     chatWithCount.roomId = roomid.id
+    chatWithCount.clusterGroupId = str(roomid.clusterGroupId)
     return chatWithCount.__str__()
 
 
@@ -203,14 +236,16 @@ class ChatListWithMessageCount:
         return json.dumps(self, default=lambda o: o.__dict__,
                           sort_keys=True, )
 
-    def __int__(self, roomId, roomName, totalMessage):
+    def __int__(self, roomId, roomName, totalMessage, clusterGroupId):
         self.roomId = roomId
         self.roomName = roomName
         self.totalMessage = totalMessage
+        self.clusterGroupId = clusterGroupId
 
     def __str__(self):
         return {"roomID": self.roomId,
                 "roomName": self.roomName,
+                "clusterGroupId": self.clusterGroupId,
                 "totalMessages": self.totalMessage}
 
     def getMessageCount(self):

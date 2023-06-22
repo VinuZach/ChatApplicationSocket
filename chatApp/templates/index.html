@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <style>
+
+    .clusterGroup
+    {
+    background: blueviolet;    width: fit-content;    padding: 11px 37px;
+    }
     .groupChat_container
     {
         width: 7em;
@@ -38,6 +43,8 @@
     {
         padding: 20px;
     }
+
+
     </style>
 </head>
 <script>
@@ -49,7 +56,8 @@
 			// join chat room
 			if("{{request.user.is_authenticated}}"){
 				chatSocket.send(JSON.stringify({
-				    'user': "{{request.user}}"
+				    'user': "{{request.user}}",
+				        "clusterId":-1,
 				}));
 			}
 		})
@@ -64,6 +72,7 @@
                     console.log("ddddd")
                     chatSocket.send(JSON.stringify({
                         "command": "refresh",
+                         'clusterId':-1,
                         'user': "{{request.user}}"
                     }));
                 }
@@ -83,6 +92,9 @@ function displayChatRoomList(data)
 {
         const currentUser="{{request.user}}"
             console.log(data.chatRoomWithTotalMessage)
+            console.log(data.clusterRoomGroups)
+
+            displayClusterChatGroups(data.clusterRoomGroups)
             var chat_container=document.getElementById("chat_container")
                var child = chat_container.lastElementChild;
 
@@ -110,6 +122,38 @@ function displayChatRoomList(data)
 
                 }
         setUpDraggingFunctionality()
+}
+function displayClusterChatGroups(data)
+{
+
+    var clusterChatContainers=document.getElementById("clusterChatContainers")
+
+        var child = clusterChatContainers.lastElementChild;
+var iDiv = document.createElement('div');
+iDiv.id = 'block';
+iDiv.className = 'clusterGroup';
+
+        while (child) {
+            clusterChatContainers.removeChild(child);
+            child = clusterChatContainers.lastElementChild;
+        }
+          for (let i = 0; i < data.length; i++)
+          {
+            let clone ;
+
+            clone = iDiv.cloneNode(true);
+            clone.innerHTML = data[i].roomName
+            clone.addEventListener('click', function handleClick(event) {
+                chatSocket.send(JSON.stringify({
+                                'clusterId':data[i].clusterGroupId,
+                                'user': "{{request.user}}"
+                            }));
+});
+            clone.id = 'elem2';
+            clusterChatContainers.append(clone);
+
+
+          }
 }
 
 function setUpDraggingFunctionality()
@@ -158,22 +202,29 @@ draggableContainers.forEach(containerItem =>{
 
 
 
+
+
 </script>
 <body>
 
 {% if request.user.is_authenticated %}
 
+<div id="clusterChatContainers" style="background: #cd8686;height: 60px;padding:10px;    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;">
 
-    <div class="chatRoom_container chatGroupRoom_container">
+</div>
+<div class="chatRoom_container chatGroupRoom_container">
 
-    </div>
+</div>
 
 <div>
-<table id="table" cellspacing="0" class="chatRoom_container" cellpadding="10" style="  border-collapse: separate;    border-spacing: 0 5px; width: 100%;     background: aqua; ">
-    <tbody id="chat_container"  style="cursor: pointer; ">
+    <table id="table" cellspacing="0" class="chatRoom_container" cellpadding="10"
+           style="  border-collapse: separate;    border-spacing: 0 5px; width: 100%;     background: aqua; ">
+        <tbody id="chat_container" style="cursor: pointer; ">
 
-    </tbody>
-</table>
+        </tbody>
+    </table>
 </div>
 {% else %}
 User not logged in

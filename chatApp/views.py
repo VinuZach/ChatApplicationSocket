@@ -8,7 +8,7 @@ def index(request):
     print(request.user)
     chatRoomListOfUsers = {}
     if request.user.is_authenticated:
-        chatRoomListOfUsers = ChartRoomList.objects.filter(userList=request.user)
+        chatRoomListOfUsers = ChartRoomList.objects.filter(userList=request.user,clusterGroupId=None)
     chatRoomWithTotalMessage = list(map(getMessageCountByRoomId, chatRoomListOfUsers))
 
     return render(request, 'index.html',
@@ -17,7 +17,6 @@ def index(request):
 
 def getMessageCountByRoomId(roomid):
     print("getMessageCountByRoomId")
-    print(roomid)
     chatRoom = ChartRoomList.objects.all().filter(id=roomid.id)[0]
     return {"room": roomid, "totalMessages": PublicRoomChatMessage.objects.by_room(chatRoom).count()}
 
