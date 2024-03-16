@@ -44,7 +44,7 @@ class ChatConsumer(WebsocketConsumer):
         print(command)
         # Send message to room group
         print("vlocked "+str(blocked_user) +" sdas  "+str(command))
-
+        _, _, chat_room_user_list = get_room_chat_messages(self.room_name, pageNumber)
         create_room_chat_message(self.room_name, user, message,blocked_user)
         if command != "join":
             async_to_sync(self.channel_layer.group_send)(
@@ -55,11 +55,12 @@ class ChatConsumer(WebsocketConsumer):
                     'prevMessages': '',
                     'user': user,
                     "new_page_number": pageNumber,
-                    "blocked_user":blocked_user
+                    "blocked_user":blocked_user,
+                    "chat_room_user_list": chat_room_user_list
                 }
             )
         else:
-            prev_messages, new_page_number = get_room_chat_messages(self.room_name, pageNumber)
+            prev_messages, new_page_number,chat_room_user_list = get_room_chat_messages(self.room_name, pageNumber)
             async_to_sync(self.channel_layer.group_send)(
                 self.room_group_name,
                 {
@@ -68,6 +69,7 @@ class ChatConsumer(WebsocketConsumer):
                     "prevMessages": prev_messages,
                     'user': "",
                     "new_page_number": new_page_number,
+                    "chat_room_user_list":chat_room_user_list
 
                 }
             )
@@ -86,15 +88,21 @@ class ChatConsumer(WebsocketConsumer):
         prevMessages = event['prevMessages']
         new_page_number = event['new_page_number']
         blocked_user=None
+        chat_room_user_list= None
         if 'blocked_user' in event.keys():
             blocked_user = event['blocked_user']
+        if 'chat_room_user_list' in event.keys():
+            chat_room_user_list = event['chat_room_user_list']
+        print("event   ---------")
+        print(event)
         # Send message to WebSocket
         self.send(text_data=json.dumps({
             'message': message,
             'prevMessages': prevMessages,
             'user': user,
             "new_page_number": new_page_number,
-            "blocked_user":blocked_user
+            "blocked_user":blocked_user,
+            "chat_room_user_list":str(chat_room_user_list)
         }))
 
 
@@ -103,7 +111,7 @@ def create_room_chat_message(room, user, message,blocked_user):
     blocked_user_data=[]
     if blocked_user:
         blocked_user_data.extend(blocked_user)
-    print(str(room)+""+str(blocked_user_data))
+
     chatRoom = ChartRoomList.objects.all().filter(id=room)[0]
     if ALL_CHAT_ROOMS != room:
         if len(message) != 0:
@@ -113,10 +121,16 @@ def create_room_chat_message(room, user, message,blocked_user):
 
 def get_room_chat_messages(room, page_number):
     new_page_number = int(page_number)
+    chat_room_user_list=[]
     try:
         print("get_room_chat_messages")
         print(str(room))
         chatRoom = ChartRoomList.objects.all().filter(id=room)[0]
+        chat_room_user_list_data =list(chatRoom.userList.all())
+        for user in chat_room_user_list_data:
+            chat_room_user_list.append(user.email)
+
+        print(chat_room_user_list)
         qs = PublicRoomChatMessage.objects.by_room(chatRoom)
         p = Paginator(qs, 13)
         if new_page_number <= p.num_pages:
@@ -125,10 +139,10 @@ def get_room_chat_messages(room, page_number):
             payload = s.serialize(p.page(new_page_number))
         else:
             payload = {}
-        return payload, new_page_number
+        return payload, new_page_number,chat_room_user_list
     except Exception as e:
         print("EXCEPTION: " + str(e))
-        return {}, new_page_number
+        return {}, new_page_number,chat_room_user_list
 
 
 class LazyRoomChatMessageEncoder(Serializer):

@@ -32,7 +32,9 @@
 </style>
 <body>
 
+<select name="fruits" id="fruits" multiple>
 
+</select>
 <div id="chat_parent" style="width: 40%;height:50%; overflow-y: scroll;display: flex;flex-direction: column-reverse;">
 
     <div id="messg_recieved">
@@ -112,12 +114,34 @@
                const data = JSON.parse(e.data);
                const currentUser="{{request.user}}"
                const blocked_user=data.blocked_user
+               if(data.chat_room_user_list!=null)
+               {
+                let chat_room_user_list_str = data.chat_room_user_list;
+                let chat_room_user_list_str_clean = chat_room_user_list_str.replace(/\[|\]/g, ''); // Remove square brackets
+                let chat_room_user_list = chat_room_user_list_str_clean.split(',')
+                console.log(chat_room_user_list)
+                var selectElement = document.getElementById("fruits");
+                if(chat_room_user_list.length>0)
+                {
+                selectElement.innerHTML = "";
+                 for(let i=0;i<chat_room_user_list.length;i++)
+                 {
 
+                    var option = document.createElement("option");
+                    option.value = chat_room_user_list[i].trim().slice(1,-1);
+                    option.text = chat_room_user_list[i].trim().slice(1,-1);
+                    selectElement.add(option);
+                 }
+                }
+                }
                if(blocked_user!=null)
                    if(blocked_user.includes(currentUser))
                        return;
                if(data.message.length>0)
                   document.querySelector('#chat_parent').insertBefore(displayMessages(document.querySelector('#chat_parent'),data.message,data.user),document.querySelector('#chat_parent').firstChild)
+
+
+
 
                if(currentPageNumber<data.new_page_number)
                if(data.prevMessages.length>0)
@@ -127,7 +151,7 @@
                    for (let i = 0; i < prevMessage.length; i++)
                    {
 
-                  let blocked_user_str = prevMessage[i].blocked_user;
+                   let blocked_user_str = prevMessage[i].blocked_user;
                    let blocked_user_str_clean = blocked_user_str.replace(/\[|\]/g, ''); // Remove square brackets
                    let blocked_user = blocked_user_str_clean.split(',')
                    if(blocked_user!=null)
@@ -177,8 +201,18 @@
 
            function hello(currentUser)
            {
-              const blocked_user_list = []
-              blocked_user_list.push("aaa@aaa.com");
+
+             var selectElement = document.getElementById("fruits");
+                 const blocked_user_list = []
+              for (var i = 0; i < selectElement.options.length; i++) {
+                var option = selectElement.options[i];
+                if (option.selected) {
+                  blocked_user_list.push(option.value.trim());
+                }
+              }
+
+
+
               const messageInputDom = document.querySelector('#chat-message-input');
               const message = messageInputDom.value;
 
