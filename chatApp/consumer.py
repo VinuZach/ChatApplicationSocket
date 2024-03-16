@@ -32,16 +32,20 @@ class ChatConsumer(WebsocketConsumer):
 
     # Receive message from WebSocket
     def receive(self, text_data=None, bytes_data=None):
-        print("inside chatmessage")
+        print("inside chat message"+str(text_data))
         text_data_json = json.loads(text_data)
         message = text_data_json['message']
+        blocked_user=None
+        if 'blocked_user' in text_data_json.keys():
+            blocked_user = text_data_json['blocked_user']
         command = text_data_json['command']
         user = text_data_json['user']
         pageNumber = text_data_json['pageNumber']
         print(command)
         # Send message to room group
-        print("create_room_chat_message  111")
-        create_room_chat_message(self.room_name, user, message)
+        print("vlocked "+str(blocked_user) +" sdas  "+str(command))
+
+        create_room_chat_message(self.room_name, user, message,blocked_user)
         if command != "join":
             async_to_sync(self.channel_layer.group_send)(
                 self.room_group_name,
@@ -50,7 +54,8 @@ class ChatConsumer(WebsocketConsumer):
                     'message': message,
                     'prevMessages': '',
                     'user': user,
-                    "new_page_number": pageNumber
+                    "new_page_number": pageNumber,
+                    "blocked_user":blocked_user
                 }
             )
         else:
@@ -62,7 +67,8 @@ class ChatConsumer(WebsocketConsumer):
                     'message': "",
                     "prevMessages": prev_messages,
                     'user': "",
-                    "new_page_number": new_page_number
+                    "new_page_number": new_page_number,
+
                 }
             )
         async_to_sync(self.channel_layer.group_send)(
@@ -79,23 +85,30 @@ class ChatConsumer(WebsocketConsumer):
         user = event['user']
         prevMessages = event['prevMessages']
         new_page_number = event['new_page_number']
+        blocked_user=None
+        if 'blocked_user' in event.keys():
+            blocked_user = event['blocked_user']
         # Send message to WebSocket
         self.send(text_data=json.dumps({
             'message': message,
             'prevMessages': prevMessages,
             'user': user,
-            "new_page_number": new_page_number
+            "new_page_number": new_page_number,
+            "blocked_user":blocked_user
         }))
 
 
-def create_room_chat_message(room, user, message):
+def create_room_chat_message(room, user, message,blocked_user):
     print("create_room_chat_message")
-    print(str(room))
+    blocked_user_data=[]
+    if blocked_user:
+        blocked_user_data.extend(blocked_user)
+    print(str(room)+""+str(blocked_user_data))
     chatRoom = ChartRoomList.objects.all().filter(id=room)[0]
     if ALL_CHAT_ROOMS != room:
         if len(message) != 0:
             PublicRoomChatMessage.objects.create(user=User.objects.get(email=user), room=chatRoom,
-                                                 content=message)
+                                                 content=message,blocked_users=blocked_user_data)
 
 
 def get_room_chat_messages(room, page_number):
@@ -125,6 +138,8 @@ class LazyRoomChatMessageEncoder(Serializer):
         dump_object.update({'message': str(obj.content)})
         dump_object.update({'timestamp': str(obj.timestamp)})
         dump_object.update({'user': str(obj.user)})
+        if obj.blocked_users:
+            dump_object.update({'blocked_user': obj.blocked_users})
         return dump_object
 
 

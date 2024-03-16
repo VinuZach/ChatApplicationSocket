@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.shortcuts import render
+
 from .models import *
 
 
@@ -16,10 +16,11 @@ def index(request):
 
 
 def getMessageCountByRoomId(roomid):
-    print("getMessageCountByRoomId")
+    print("getMessageCountByRoomId "+str(roomid))
     chatRoom = ChartRoomList.objects.all().filter(id=roomid.id)[0]
     return {"room": roomid, "totalMessages": PublicRoomChatMessage.objects.by_room(chatRoom).count()}
 
 
 def room(request, room_name):
+    print(f"asd {room_name}")
     return render(request, 'ChatRoom.html', {'room_name': room_name})

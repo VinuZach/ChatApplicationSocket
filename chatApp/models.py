@@ -39,7 +39,7 @@ class PublicRoomChatMessage(models.Model):
     room = models.ForeignKey(ChartRoomList, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     content = models.TextField(unique=False, blank=False, )
-
+    blocked_users =models.TextField(unique=False,blank=False,default='[]')
     objects = PublicRoomChatMessageManager()
 
     def __str__(self):

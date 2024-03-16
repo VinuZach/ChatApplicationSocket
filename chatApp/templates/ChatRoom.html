@@ -51,136 +51,146 @@
 <script>
 
 
- var chatParent= document.getElementById('chat_parent')
-chatParent.addEventListener(
-    'scroll',
-    function()
-    {
-
-        var scrollTop = chatParent.scrollTop;
-        var scrollHeight = chatParent.scrollHeight; // added
-        var offsetHeight = chatParent.offsetHeight;
-        var contentHeight = scrollHeight - offsetHeight; // added
-
-
-        if (contentHeight <= Math.abs(scrollTop-30)) // modified
-        {
-      	chatSocket.send(JSON.stringify({
-					"command": "join",
-				    'message': "",
-				    'user': "{{request.user}}",
-				    "pageNumber":currentPageNumber
-				}));
-        }
-
-    },
-    false
-);
-        const CHAT_STATUS={
-            OffLine:"offline",
-            JOINED :"Joined",
-
-
-        }
-
-
-        const roomName = JSON.parse(document.getElementById('room-name').textContent);
-        var current_chat_Status=CHAT_STATUS.OffLine
-        var currentPageNumber=0
-        const chatSocket = new WebSocket(
-            'ws://'
-            + window.location.host
-            + '/ws/chat/'
-            + roomName
-            + '/'
-        );
-
-
-	chatSocket.addEventListener("open", function(e){
-			console.log("ChatSocket OPEN")
-			// join chat room
-			if("{{request.user.is_authenticated}}"){
-				chatSocket.send(JSON.stringify({
-					"command": "join",
-				    'message': "",
-				    'user': "{{request.user}}",
-				    "pageNumber":currentPageNumber
-				}));
-			}
-		})
-        chatSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            const currentUser="{{request.user}}"
-
-            if(data.message.length>0)
-               document.querySelector('#chat_parent').insertBefore(displayMessages(document.querySelector('#chat_parent'),data.message,data.user),document.querySelector('#chat_parent').firstChild)
-
-            if(currentPageNumber<data.new_page_number)
-            if(data.prevMessages.length>0)
-            {
-                currentPageNumber=data.new_page_number
-                const prevMessage =data.prevMessages
-                for (let i = 0; i < prevMessage.length; i++)
-               document.querySelector('#chat_parent').append( displayMessages(document.querySelector('#chat_parent'),prevMessage[i].message,prevMessage[i].user))
-            }
-
-
-
-        };
-
-        chatSocket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly');
-        };
-
-        document.querySelector('#chat-message-input').focus();
-        document.querySelector('#chat-message-input').onkeyup = function(e) {
-            if (e.keyCode === 13) {  // enter, return
-                document.querySelector('#chat-message-submit').click();
-            }
-        };
-
-
-       function displayMessages(parentElement,message,sender_user)
+    var chatParent= document.getElementById('chat_parent')
+   chatParent.addEventListener(
+       'scroll',
+       function()
        {
-             let message_container;
-             if(sender_user==("{{request.user}}"))
-             {
-                const chatItem=document.querySelector("#messg_send")
+
+           var scrollTop = chatParent.scrollTop;
+           var scrollHeight = chatParent.scrollHeight; // added
+           var offsetHeight = chatParent.offsetHeight;
+           var contentHeight = scrollHeight - offsetHeight; // added
+
+
+           if (contentHeight <= Math.abs(scrollTop-30)) // modified
+           {
+             chatSocket.send(JSON.stringify({
+                       "command": "join",
+                       'message': "",
+                       'user': "{{request.user}}",
+                       "pageNumber":currentPageNumber
+                   }));
+           }
+
+       },
+       false
+   );
+           const CHAT_STATUS={
+               OffLine:"offline",
+               JOINED :"Joined",
+
+
+           }
+
+
+           const roomName = JSON.parse(document.getElementById('room-name').textContent);
+           var current_chat_Status=CHAT_STATUS.OffLine
+           var currentPageNumber=0
+           const chatSocket = new WebSocket(
+               'ws://'
+               + window.location.host
+               + '/ws/chat/'
+               + roomName
+               + '/'
+           );
+
+
+       chatSocket.addEventListener("open", function(e){
+               console.log("ChatSocket OPEN")
+               // join chat room
+               if("{{request.user.is_authenticated}}"){
+                   chatSocket.send(JSON.stringify({
+                       "command": "join",
+                       'message': "",
+                       'user': "{{request.user}}",
+                       "pageNumber":currentPageNumber
+                   }));
+               }
+           })
+           chatSocket.onmessage = function(e) {
+               const data = JSON.parse(e.data);
+               const currentUser="{{request.user}}"
+               const blocked_user=data.blocked_user
+
+               if(blocked_user!=null)
+                   if(blocked_user.includes(currentUser))
+                       return;
+               if(data.message.length>0)
+                  document.querySelector('#chat_parent').insertBefore(displayMessages(document.querySelector('#chat_parent'),data.message,data.user),document.querySelector('#chat_parent').firstChild)
+
+               if(currentPageNumber<data.new_page_number)
+               if(data.prevMessages.length>0)
+               {
+                   currentPageNumber=data.new_page_number
+                   const prevMessage =data.prevMessages
+                   for (let i = 0; i < prevMessage.length; i++)
+                   {
+
+                  let blocked_user_str = prevMessage[i].blocked_user;
+                   let blocked_user_str_clean = blocked_user_str.replace(/\[|\]/g, ''); // Remove square brackets
+                   let blocked_user = blocked_user_str_clean.split(',')
+                   if(blocked_user!=null)
+                   if(blocked_user.includes("'"+currentUser+"'"))
+                       continue;
+                    document.querySelector('#chat_parent').append( displayMessages(document.querySelector('#chat_parent'),prevMessage[i].message,prevMessage[i].user))
+                     }
+               }
+
+
+
+           };
+
+           chatSocket.onclose = function(e) {
+               console.error('Chat socket closed unexpectedly');
+           };
+
+           document.querySelector('#chat-message-input').focus();
+           document.querySelector('#chat-message-input').onkeyup = function(e) {
+               if (e.keyCode === 13) {  // enter, return
+                   document.querySelector('#chat-message-submit').click();
+               }
+           };
+
+
+          function displayMessages(parentElement,message,sender_user)
+          {
+                let message_container;
+                if(sender_user==("{{request.user}}"))
+                {
+                   const chatItem=document.querySelector("#messg_send")
+                    clone = chatItem.cloneNode(true);
+                    clone.querySelector("#message_").innerHTML=message
+                    clone.style.display ="flex"
+                }
+                else
+                {
+                 const chatItem=document.querySelector("#messg_recieved")
                  clone = chatItem.cloneNode(true);
-                 clone.querySelector("#message_").innerHTML=message
+                 clone.querySelector("#message_rec").innerHTML=message
+                 clone.querySelector("#user_name").innerHTML=sender_user
                  clone.style.display ="flex"
-             }
-             else
-             {
-              const chatItem=document.querySelector("#messg_recieved")
-              clone = chatItem.cloneNode(true);
-              clone.querySelector("#message_rec").innerHTML=message
-              clone.querySelector("#user_name").innerHTML=sender_user
-              clone.style.display ="flex"
-             }
+                }
 
-              return clone
-       }
+                 return clone
+          }
 
-        function hello(currentUser)
-        {
+           function hello(currentUser)
+           {
+              const blocked_user_list = []
+              blocked_user_list.push("aaa@aaa.com");
+              const messageInputDom = document.querySelector('#chat-message-input');
+              const message = messageInputDom.value;
 
-           const messageInputDom = document.querySelector('#chat-message-input');
-           const message = messageInputDom.value;
-
-            chatSocket.send(JSON.stringify({
-                "command": "content",
-                'message': message,
-                'user': currentUser,
-                "pageNumber":currentPageNumber
-            }));
-            messageInputDom.value = '';
-        }
-
-
-
-
-
+               chatSocket.send(JSON.stringify({
+                   "command": "content",
+                   'message': message,
+                   'user': currentUser,
+                   "pageNumber":currentPageNumber,
+                   "blocked_user":blocked_user_list
+               }));
+               messageInputDom.value = '';
+           }
 
 
 </script>
