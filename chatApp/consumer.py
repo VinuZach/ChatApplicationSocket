@@ -52,7 +52,7 @@ class ChatConsumer(WebsocketConsumer):
                 {
                     'type': 'chat_message',
                     'message': message,
-                    'prevMessages': '',
+                    'prevMessages': None,
                     'user': user,
                     "new_page_number": pageNumber,
                     "blocked_user":blocked_user,

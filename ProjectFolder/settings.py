@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-7!pg7_y+w!57n815vr9074omz@$xmu0&q4c@=e_5t^dyb5vp48
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'chatApp',
     'channels',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
