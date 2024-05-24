@@ -7,6 +7,41 @@ from rest_framework import status
 from .serializer import *
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
+from rest_framework.views import exception_handler
+
+
+def api_exception_handler(exc, context):
+    response = exception_handler(exc, context)
+    print("inside exception ")
+    if response is not None:
+        occurredException = exc.__class__.__name__
+        print(occurredException)
+        apiResponse=None
+        match occurredException:
+            case "MethodNotAllowed":
+                apiResponse = handleInvalidMethod(response)
+            case "AuthenticationFailed":
+                apiResponse=handleAuthException(response)
+        return apiResponse
+    else:
+        return Response({ "success": True})
+
+def handleAuthException(response):
+    response.data = {
+        "message": "user unauthorised",
+        "statusCode": "200",
+        "success": False
+    }
+    return response
+
+
+def handleInvalidMethod(response):
+    response.data = {
+        "message": "Invalid api",
+        "statusCode": "405",
+        "success": False
+    }
+    return response
 
 
 @authentication_classes([BasicAuthentication])
@@ -30,8 +65,13 @@ def register_new_user(request):
         user.set_password(request.data["password"])
         user.save()
         token = Token.objects.create(user=user)
-        return Response({"tokem": token.key, "user": serializers.data})
-    return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"token": token.key, "user": serializers.data})
+    else:
+        default_errors = serializers.errors
+        field_names = None
+        for field_name, field_errors in default_errors.items():
+            field_names=field_name+" "
+        return Response({"message": f"invalid data in {field_names}", "success": False},status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
