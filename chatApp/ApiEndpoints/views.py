@@ -8,7 +8,7 @@ from .serializer import *
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 
-#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
+
 @authentication_classes([BasicAuthentication])
 @api_view(['POST'])
 def authenticate_user(request):
