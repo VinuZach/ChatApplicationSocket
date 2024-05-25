@@ -11,6 +11,13 @@ from rest_framework.views import exception_handler
 
 
 def api_exception_handler(exc, context):
+    def handleApiException(response_data, message, status_code):
+        response_data.data = {
+            "message": message,
+            "statusCode": status_code,
+            "success": False
+        }
+        return response_data
     response = exception_handler(exc, context)
     print("inside exception ")
     if response is not None:
@@ -19,29 +26,15 @@ def api_exception_handler(exc, context):
         apiResponse=None
         match occurredException:
             case "MethodNotAllowed":
-                apiResponse = handleInvalidMethod(response)
+                apiResponse = handleApiException(response,"Invalid api","400")#handleInvalidMethod(response)
             case "AuthenticationFailed":
-                apiResponse=handleAuthException(response)
+                apiResponse=handleApiException(response,"Invalid user","200") #handleAuthException(response)
+            case "NotAuthenticated":
+                apiResponse =handleApiException(response,"user not authenticated","200")
         return apiResponse
     else:
         return Response({ "success": True})
 
-def handleAuthException(response):
-    response.data = {
-        "message": "user unauthorised",
-        "statusCode": "200",
-        "success": False
-    }
-    return response
-
-
-def handleInvalidMethod(response):
-    response.data = {
-        "message": "Invalid api",
-        "statusCode": "405",
-        "success": False
-    }
-    return response
 
 
 @authentication_classes([BasicAuthentication])
@@ -65,9 +58,10 @@ def register_new_user(request):
         user.set_password(request.data["password"])
         user.save()
         token = Token.objects.create(user=user)
-        return Response({"token": token.key, "user": serializers.data})
+        return Response({"token": token.key})
     else:
         default_errors = serializers.errors
+        print(default_errors)
         field_names = None
         for field_name, field_errors in default_errors.items():
             field_names=field_name+" "
