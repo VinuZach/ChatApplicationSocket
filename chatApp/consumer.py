@@ -32,7 +32,7 @@ class ChatConsumer(WebsocketConsumer):
 
     # Receive message from WebSocket
     def receive(self, text_data=None, bytes_data=None):
-        print("inside chat message"+str(text_data))
+
         text_data_json = json.loads(text_data)
         message = text_data_json['message']
         blocked_user=None
@@ -164,6 +164,7 @@ class LazyRoomChatMessageEncoder(Serializer):
 
 class RoomListConsumer(WebsocketConsumer):
     def connect(self):
+        print("GROUP ROOM CONNECT")
         self.room_name = ALL_CHAT_ROOMS
         self.room_group_name = ALL_CHAT_ROOMS
         # Join room group
@@ -174,10 +175,10 @@ class RoomListConsumer(WebsocketConsumer):
         self.accept()
 
     def chat_List(self, event):
-        print("chat chat_List ")
-        print(event['clusterId'])
+        print("chat_List  ")
 
-        user = self.scope["user"]
+        user = event['user']
+        print(user)
         try:
             clusterId = event['clusterId']
         except:
@@ -205,7 +206,7 @@ class RoomListConsumer(WebsocketConsumer):
         text_data_json = json.loads(text_data)
         user = text_data_json['user']
         clusterId = text_data_json['clusterId']
-        print("inside chatroom ")
+
         print(clusterId)
         async_to_sync(self.channel_layer.group_send)(
             self.room_group_name,
@@ -226,10 +227,10 @@ def retrieveGroupList(user):
 
 
 def retrieveChatList(user, clusterId):
-    print("retrieveChatList")
+
     print(clusterId)
     if clusterId != "-1":
-        print("asdsadsad")
+
         chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user),
                                                            clusterGroupId=GroupClusterList.objects.get(id=clusterId),
                                                            clusterGroupId__isnull=False)
