@@ -18,23 +18,23 @@ def api_exception_handler(exc, context):
             "success": False
         }
         return response_data
+
     response = exception_handler(exc, context)
     print("inside exception ")
     if response is not None:
-        occurredException = exc.__class__.__name__
-        print(occurredException)
-        apiResponse=None
-        match occurredException:
+        occurred_exception = exc.__class__.__name__
+        print(occurred_exception)
+        api_response = None
+        match occurred_exception:
             case "MethodNotAllowed":
-                apiResponse = handleApiException(response,"Invalid api","400")#handleInvalidMethod(response)
+                api_response = handleApiException(response, "Invalid api", "400")  # handleInvalidMethod(response)
             case "AuthenticationFailed":
-                apiResponse=handleApiException(response,"Invalid user","200") #handleAuthException(response)
+                api_response = handleApiException(response, "Invalid user", "200")  # handleAuthException(response)
             case "NotAuthenticated":
-                apiResponse =handleApiException(response,"user not authenticated","200")
-        return apiResponse
+                api_response = handleApiException(response, "user not authenticated", "200")
+        return api_response
     else:
-        return Response({ "success": True})
-
+        return Response({"success": True})
 
 
 @authentication_classes([BasicAuthentication])
@@ -58,14 +58,15 @@ def register_new_user(request):
         user.set_password(request.data["password"])
         user.save()
         token = Token.objects.create(user=user)
-        return Response({"token": token.key})
+        return Response({"token": token.key, "success":True})
     else:
         default_errors = serializers.errors
         print(default_errors)
         field_names = None
         for field_name, field_errors in default_errors.items():
-            field_names=field_name+" "
-        return Response({"message": f"invalid data in {field_names}", "success": False},status=status.HTTP_400_BAD_REQUEST)
+            field_names = field_name + " "
+        return Response({"message": f"invalid data in {field_names}", "success": False},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
