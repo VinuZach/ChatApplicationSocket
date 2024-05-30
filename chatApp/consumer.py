@@ -176,9 +176,7 @@ class RoomListConsumer(WebsocketConsumer):
 
     def chat_List(self, event):
         print("chat_List  ")
-
         user = event['user']
-        print(user)
         try:
             clusterId = event['clusterId']
         except:
@@ -222,8 +220,31 @@ def retrieveGroupList(user):
     chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user),
                                                        clusterGroupId__isnull=False).order_by('-clusterGroupId__clusterChatCount')
 
-    chatRoomWithTotalMessage = list(map(getMessageCountForGroup, chatRoomListOfUsers))
-    return chatRoomWithTotalMessage
+    #chatRoomWithTotalMessage = list(map(getMessageCountForGroup, chatRoomListOfUsers))
+    return getGroupDetailsWithMessageCount(chatRoomListOfUsers)
+
+def getGroupDetailsWithMessageCount(chatRoomList):
+    groupDetailsDict= {}
+    for chatRoom in chatRoomList:
+        group_details = GroupClusterList.objects.get(id=str(chatRoom.clusterGroupId))
+        groupItem=groupDetailsDict.get(group_details.clusterName)
+        if groupItem is None:
+            chatWithCount = ChatListWithMessageCount()
+            chatWithCount.roomName = group_details.clusterName
+            chatWithCount.totalMessage = PublicRoomChatMessage.objects.by_room(chatRoom).count()
+            chatWithCount.clusterGroupId = str(group_details.id)
+            chatWithCount.roomId = None
+            groupDetailsDict[group_details.clusterName]=chatWithCount
+
+        else:
+
+            groupItem.totalMessage += PublicRoomChatMessage.objects.by_room(chatRoom).count()
+    groupDetailsList=[]
+    for x in groupDetailsDict.values():
+        groupDetailsList.append(x.__str__())
+    print(groupDetailsList)
+    return groupDetailsList
+
 
 
 def retrieveChatList(user, clusterId):
@@ -235,18 +256,22 @@ def retrieveChatList(user, clusterId):
                                                            clusterGroupId=GroupClusterList.objects.get(id=clusterId),
                                                            clusterGroupId__isnull=False)
     else:
-        chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user),
-                                                           clusterGroupId__isnull=True)
+        chatRoomListOfUsers = ChartRoomList.objects.filter(userList=User.objects.get(email=user)                                                    )
     chatRoomWithTotalMessage = list(map(getMessageCountByRoomId, chatRoomListOfUsers))
     return sorted(chatRoomWithTotalMessage, key=lambda d: d["totalMessages"], reverse=True)
 
 
 def getMessageCountForGroup(roomid):
-    chatRoom = ChartRoomList.objects.all().filter(id=roomid.id)[0]
+    #chatRoom = ChartRoomList.objects.all().filter(id=roomid.id)[0]
+
     chatWithCount = ChatListWithMessageCount()
-    chatWithCount.roomName = str(GroupClusterList.objects.get(id=str(roomid.clusterGroupId)).clusterName)
-    chatWithCount.totalMessage = PublicRoomChatMessage.objects.by_room(chatRoom).count()
-    chatWithCount.roomId = roomid.id
+    group_details=GroupClusterList.objects.get(id=str(roomid.clusterGroupId))
+    chatRoomList = ChartRoomList.objects.all().filter(clusterGroupId=group_details.id)
+    chatWithCount.roomName = group_details.clusterName
+    #chatWithCount.totalMessage = PublicRoomChatMessage.objects.by_room(chatRoom).count()
+    #print(PublicRoomChatMessage.objects.filter(room__in=chatRoomList))
+    chatWithCount.totalMessage = 0
+    # chatWithCount.roomId = roomid.id
     chatWithCount.clusterGroupId = str(roomid.clusterGroupId)
     return chatWithCount.__str__()
 
@@ -262,9 +287,6 @@ def getMessageCountByRoomId(roomid):
 
 
 class ChatListWithMessageCount:
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__,
-                          sort_keys=True, )
 
     def __int__(self, roomId, roomName, totalMessage, clusterGroupId):
         self.roomId = roomId
@@ -273,7 +295,8 @@ class ChatListWithMessageCount:
         self.clusterGroupId = clusterGroupId
 
     def __str__(self):
-        return {"roomID": self.roomId,
+        return {
+                "roomID": self.roomId,
                 "roomName": self.roomName,
                 "clusterGroupId": self.clusterGroupId,
                 "totalMessages": self.totalMessage}
