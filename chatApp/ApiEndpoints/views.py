@@ -9,6 +9,8 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework.views import exception_handler
 
+from ..models import *
+
 
 def api_exception_handler(exc, context):
     def handleApiException(response_data, message, status_code):
@@ -19,8 +21,9 @@ def api_exception_handler(exc, context):
         }
         return response_data
 
+    print(f"inside exception {exc}")
     response = exception_handler(exc, context)
-    print("inside exception ")
+
     if response is not None:
         occurred_exception = exc.__class__.__name__
         print(occurred_exception)
@@ -34,7 +37,7 @@ def api_exception_handler(exc, context):
                 api_response = handleApiException(response, "user not authenticated", "200")
         return api_response
     else:
-        return Response({"success": True})
+        return Response({"success": False})
 
 
 @authentication_classes([BasicAuthentication])
@@ -50,6 +53,31 @@ def authenticate_user(request):
 
 
 @api_view(["POST"])
+def assign_room_to_group(request):
+    print(request.data["roomId"])
+    print(request.data["userOverride"])
+    print(request.data["groupId"])
+    chatroomList = ChartRoomList.objects.all().filter(id=request.data["roomId"])
+    groupList = GroupClusterList.objects.all().filter(id=request.data["groupId"])
+    if groupList.count() == 0:
+        return Response({"message": "group does not exist", "success": False})
+    groupItem = groupList.first()
+    if chatroomList.count() > 0:
+        chatRoom = chatroomList.first()
+        if chatRoom.clusterGroupId:
+            if not request.data["userOverride"]:
+                return Response({"message": "Room already assigned group", "success": False})
+
+        print(groupItem)
+        chatRoom.clusterGroupId = groupItem
+        chatRoom.save()
+
+    else:
+        print("no such room")
+    return Response({"message": "Success", "success": True})
+
+
+@api_view(["POST"])
 def register_new_user(request):
     serializers = UserSerializer(data=request.data)
     if serializers.is_valid():
@@ -58,7 +86,7 @@ def register_new_user(request):
         user.set_password(request.data["password"])
         user.save()
         token = Token.objects.create(user=user)
-        return Response({"token": token.key, "success":True})
+        return Response({"token": token.key, "success": True})
     else:
         default_errors = serializers.errors
         print(default_errors)
