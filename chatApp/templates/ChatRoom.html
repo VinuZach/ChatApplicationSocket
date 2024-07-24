@@ -116,9 +116,9 @@
                const blocked_user=data.blocked_user
                if(data.chat_room_user_list!=null)
                {
-                let chat_room_user_list_str = data.chat_room_user_list;
-                let chat_room_user_list_str_clean = chat_room_user_list_str.replace(/\[|\]/g, ''); // Remove square brackets
-                let chat_room_user_list = chat_room_user_list_str_clean.split(',')
+                let chat_room_user_list = data.chat_room_user_list;
+<!--                let chat_room_user_list_str_clean = chat_room_user_list_str.replace(/\[|\]/g, ''); // Remove square brackets-->
+<!--                let chat_room_user_list = chat_room_user_list_str_clean.split(',')-->
                 console.log(chat_room_user_list)
                 var selectElement = document.getElementById("fruits");
                 if(chat_room_user_list.length>0)
@@ -151,9 +151,9 @@
                    for (let i = 0; i < prevMessage.length; i++)
                    {
 
-                   let blocked_user_str = prevMessage[i].blocked_user;
-                   let blocked_user_str_clean = blocked_user_str.replace(/\[|\]/g, ''); // Remove square brackets
-                   let blocked_user = blocked_user_str_clean.split(',')
+                   let blocked_user = prevMessage[i].blocked_user;
+<!--                   let blocked_user_str_clean = blocked_user_str.replace(/\[|\]/g, ''); // Remove square brackets-->
+<!--                   let blocked_user = blocked_user_str_clean.split(',')-->
                    if(blocked_user!=null)
                    if(blocked_user.includes("'"+currentUser+"'"))
                        continue;
