@@ -7,7 +7,7 @@ from django.core.serializers.python import Serializer
 from django.db.models import QuerySet
 
 from .models import *
-
+import ast
 ALL_CHAT_ROOMS = "all_chat_master"
 
 
@@ -98,7 +98,7 @@ class ChatConsumer(WebsocketConsumer):
             'user': user,
             "new_page_number": new_page_number,
             "blocked_user": blocked_user,
-            "chat_room_user_list": str(chat_room_user_list)
+            "chat_room_user_list": chat_room_user_list
         }))
 
 
@@ -129,6 +129,7 @@ def get_room_chat_messages(room, page_number):
             new_page_number = new_page_number + 1
             s = LazyRoomChatMessageEncoder()
             payload = s.serialize(p.page(new_page_number))
+            print(payload)
         else:
             payload = {}
         return payload, new_page_number, chat_room_user_list
@@ -145,7 +146,9 @@ class LazyRoomChatMessageEncoder(Serializer):
         dump_object.update({'timestamp': str(obj.timestamp)})
         dump_object.update({'user': str(obj.user)})
         if obj.blocked_users:
-            dump_object.update({'blocked_user': obj.blocked_users})
+            print(obj.blocked_users)
+            print(ast.literal_eval(obj.blocked_users))
+            dump_object.update({'blocked_user': ast.literal_eval(obj.blocked_users)})
         return dump_object
 
 
