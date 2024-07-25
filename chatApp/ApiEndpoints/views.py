@@ -1,15 +1,14 @@
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework import status
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
+from rest_framework.authtoken.models import Token
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from rest_framework import status
-from .serializer import *
-from rest_framework.authtoken.models import Token
-from django.contrib.auth.models import User
 from rest_framework.views import exception_handler
 
+from .serializer import *
 from ..models import *
+from django.http import JsonResponse
 
 
 def api_exception_handler(exc, context):
@@ -95,6 +94,44 @@ def register_new_user(request):
             field_names = field_name + " "
         return Response({"message": f"invalid data in {field_names}", "success": False},
                         status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+def retrieve_all_users(request):
+    # all_users_lists = User.objects.values_list('username', flat=True)
+    all_users_lists = User.objects.all().values()
+    return JsonResponse(list(all_users_lists), safe=False)
+
+
+@api_view(["POST"])
+def create_update_chat(request):
+    existing_chat_room = None
+    chat_room_name = request.data["room_name"]
+    chat_user_list = request.data["chat_user_list"]
+    if len(chat_user_list)>0:
+        user_list = User.objects.all().filter(username__in=chat_user_list)
+        print(chat_user_list)
+        print(User.objects.all().filter(username__in=chat_user_list))
+    if request.data["room_id"]:
+        existing_chat_room = ChartRoomList.objects.filter(id=request.data["room_id"]).first()
+        print(existing_chat_room.roomName)
+        if len(chat_user_list) > 0:
+            existing_chat_room.userList.add(*user_list)
+
+        else:
+            user_list =existing_chat_room.userList
+        existing_chat_room.roomName=chat_room_name
+        existing_chat_room.userList.add(*user_list)
+        existing_chat_room.save()
+        if existing_chat_room is None:
+            return Response({"message": "NO such room"})
+    else:
+        new_chat_room=ChartRoomList(roomName=chat_room_name,  clusterGroupId=None)
+        new_chat_room.save()
+        new_chat_room.userList.add(*user_list)
+
+
+    return Response({})
 
 
 @api_view(['GET'])
