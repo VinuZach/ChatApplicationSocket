@@ -8,6 +8,7 @@ from django.db.models import QuerySet
 
 from .models import *
 import ast
+
 ALL_CHAT_ROOMS = "all_chat_master"
 
 
@@ -179,7 +180,7 @@ class RoomListConsumer(WebsocketConsumer):
             'chatRoomWithTotalMessage': retrieveChatList(user, clusterId),
             'clusterRoomGroups': retrieveGroupList(user),
             "Chat_Type": "updated_chatlist",
-
+            "requested_user": user
         }))
 
     def refresh_chat_List(self, event):
