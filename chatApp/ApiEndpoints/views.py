@@ -60,10 +60,10 @@ def create_update_group(request):
     if GroupClusterList.objects.filter(clusterName=new_group_name).first():
         return Response({"message": "Group name already exists", "success": False})
     else:
-        created_group=GroupClusterList(clusterName=new_group_name, clusterChatCount=len(assigned_rooms))
+        created_group = GroupClusterList(clusterName=new_group_name, clusterChatCount=len(assigned_rooms))
         created_group.save()
         ChartRoomList.objects.filter(id__in=assigned_rooms).update(clusterGroupId=created_group.id)
-        return Response({"message": "Group created succesfully ", "success": False})
+        return Response({"message": "Group created succesfully ", "success": True})
 
 
 @api_view(["POST"])
@@ -121,9 +121,14 @@ def retrieve_all_users(request):
 
 @api_view(["POST"])
 def retrieve_all_chats(request):
-    all_chat_list = ChartRoomList.objects.all().filter(clusterGroupId=None).values()
-    # all_chat_list = User.objects.all().values()
-    return JsonResponse(list(all_chat_list), safe=False)
+    block_assigned_chats = request.data["block_assigned_chats"]
+    current_user = request.data["currentUserName"]
+    all_chat_list = ChartRoomList.objects.all().filter(userList__username=current_user)
+    if block_assigned_chats:
+        all_chat_list = all_chat_list.filter(clusterGroupId=None)
+    all_chat_list = all_chat_list.values()
+    response = Response({"success":True,"chatListData": list(all_chat_list)})
+    return response
 
 
 @api_view(["POST"])
