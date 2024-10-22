@@ -33,51 +33,54 @@ class ChatConsumer(WebsocketConsumer):
 
     # Receive message from WebSocket
     def receive(self, text_data=None, bytes_data=None):
+        try:
+            print(text_data)
+            text_data_json = json.loads(text_data)
+            message = text_data_json['message']
+            blocked_user = None
+            if 'blocked_user' in text_data_json.keys():
+                blocked_user = text_data_json['blocked_user']
+            command = text_data_json['command']
+            user = text_data_json['user']
+            pageNumber = text_data_json['pageNumber']
+            # Send message to room group
+            _, _, chat_room_user_list = get_room_chat_messages(self.room_name, pageNumber)
+            create_room_chat_message(self.room_name, user, message, blocked_user)
+            if command != "join":
+                async_to_sync(self.channel_layer.group_send)(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message': message,
+                        'prevMessages': None,
+                        'user': user,
+                        "new_page_number": pageNumber,
+                        "blocked_user": blocked_user,
+                        "chat_room_user_list": chat_room_user_list
+                    }
+                )
+            else:
+                prev_messages, new_page_number, chat_room_user_list = get_room_chat_messages(self.room_name, pageNumber)
+                async_to_sync(self.channel_layer.group_send)(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message': "",
+                        "prevMessages": prev_messages,
+                        'user': "",
+                        "new_page_number": new_page_number,
+                        "chat_room_user_list": chat_room_user_list
 
-        text_data_json = json.loads(text_data)
-        message = text_data_json['message']
-        blocked_user = None
-        if 'blocked_user' in text_data_json.keys():
-            blocked_user = text_data_json['blocked_user']
-        command = text_data_json['command']
-        user = text_data_json['user']
-        pageNumber = text_data_json['pageNumber']
-        # Send message to room group
-        _, _, chat_room_user_list = get_room_chat_messages(self.room_name, pageNumber)
-        create_room_chat_message(self.room_name, user, message, blocked_user)
-        if command != "join":
+                    }
+                )
             async_to_sync(self.channel_layer.group_send)(
-                self.room_group_name,
+                ALL_CHAT_ROOMS,
                 {
-                    'type': 'chat_message',
-                    'message': message,
-                    'prevMessages': None,
-                    'user': user,
-                    "new_page_number": pageNumber,
-                    "blocked_user": blocked_user,
-                    "chat_room_user_list": chat_room_user_list
+                    'type': 'refresh_chat_List'
                 }
             )
-        else:
-            prev_messages, new_page_number, chat_room_user_list = get_room_chat_messages(self.room_name, pageNumber)
-            async_to_sync(self.channel_layer.group_send)(
-                self.room_group_name,
-                {
-                    'type': 'chat_message',
-                    'message': "",
-                    "prevMessages": prev_messages,
-                    'user': "",
-                    "new_page_number": new_page_number,
-                    "chat_room_user_list": chat_room_user_list
-
-                }
-            )
-        async_to_sync(self.channel_layer.group_send)(
-            ALL_CHAT_ROOMS,
-            {
-                'type': 'refresh_chat_List'
-            }
-        )
+        except Exception as e:
+            print(e)
 
     # Receive message from room group
     def chat_message(self, event):
