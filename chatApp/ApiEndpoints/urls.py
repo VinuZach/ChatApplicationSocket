@@ -10,4 +10,5 @@ urlpatterns = [
     path("retrieve_all_users",views.retrieve_all_users,name="retrieve_all_users"),
     path("retrieve_all_chats", views.retrieve_all_chats, name="retrieve_all_chats"),
     path('tes', views.tesr, name="index"),
+    path('api/upload/', views.upload_file_api, name='document_upload_api'),
 ]
