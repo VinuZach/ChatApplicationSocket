@@ -38,14 +38,18 @@ class ChatConsumer(WebsocketConsumer):
             text_data_json = json.loads(text_data)
             message = text_data_json['message']
             blocked_user = None
+            chat_attachment=None
             if 'blocked_user' in text_data_json.keys():
                 blocked_user = text_data_json['blocked_user']
+            if 'chatAttachment' in text_data_json.keys():
+                chat_attachment=text_data_json["chatAttachment"]
+
             command = text_data_json['command']
             user = text_data_json['user']
             pageNumber = text_data_json['pageNumber']
             # Send message to room group
             _, _, chat_room_user_list = get_room_chat_messages(self.room_name, pageNumber)
-            create_room_chat_message(self.room_name, user, message, blocked_user)
+            create_room_chat_message(self.room_name, user, message, blocked_user,chat_attachment)
             if command != "join":
                 async_to_sync(self.channel_layer.group_send)(
                     self.room_group_name,
@@ -56,7 +60,8 @@ class ChatConsumer(WebsocketConsumer):
                         'user': user,
                         "new_page_number": pageNumber,
                         "blocked_user": blocked_user,
-                        "chat_room_user_list": chat_room_user_list
+                        "chat_room_user_list": chat_room_user_list,
+                        "chatAttachment":chat_attachment
                     }
                 )
             else:
@@ -69,8 +74,8 @@ class ChatConsumer(WebsocketConsumer):
                         "prevMessages": prev_messages,
                         'user': "",
                         "new_page_number": new_page_number,
-                        "chat_room_user_list": chat_room_user_list
-
+                        "chat_room_user_list": chat_room_user_list,
+                        "chatAttachment": None
                     }
                 )
             async_to_sync(self.channel_layer.group_send)(
@@ -91,10 +96,14 @@ class ChatConsumer(WebsocketConsumer):
         new_page_number = event['new_page_number']
         blocked_user = None
         chat_room_user_list = None
+        chat_attachment=None
         if 'blocked_user' in event.keys():
             blocked_user = event['blocked_user']
         if 'chat_room_user_list' in event.keys():
             chat_room_user_list = event['chat_room_user_list']
+        if 'chatAttachment' in event.keys():
+            chat_attachment = event["chatAttachment"]
+
         # Send message to WebSocket
         self.send(text_data=json.dumps({
             'message': message,
@@ -102,24 +111,29 @@ class ChatConsumer(WebsocketConsumer):
             'user': user,
             "new_page_number": new_page_number,
             "blocked_user": blocked_user,
-            "chat_room_user_list": chat_room_user_list
+            "chat_room_user_list": chat_room_user_list,
+            "chatAttachment": chat_attachment
         }))
 
 
-def create_room_chat_message(room, user, message, blocked_user):
+def create_room_chat_message(room, user, message, blocked_user,chat_attachment):
     blocked_user_data = []
     if blocked_user:
         blocked_user_data.extend(blocked_user)
+    print("create room chat")
 
     chatRoom = ChartRoomList.objects.all().filter(id=room)[0]
+
     if ALL_CHAT_ROOMS != room:
-        if len(message) != 0:
+        if len(message) != 0 or chat_attachment is not None:
             PublicRoomChatMessage.objects.create(user=User.objects.get(email=user), room=chatRoom,
-                                                 content=message, blocked_users=blocked_user_data)
+                                                 content=message, blocked_users=blocked_user_data,chatAttachment=chat_attachment)
 
 
 def get_room_chat_messages(room, page_number):
     new_page_number = int(page_number)
+    print("get messages list ")
+    print(new_page_number)
     chat_room_user_list = []
     try:
         chatRoom = ChartRoomList.objects.all().filter(id=room)[0]
@@ -129,11 +143,12 @@ def get_room_chat_messages(room, page_number):
 
         qs = PublicRoomChatMessage.objects.by_room(chatRoom)
         p = Paginator(qs, 13)
+        print(f"p.num_pages {p.num_pages}"  )
         if new_page_number <= p.num_pages:
             new_page_number = new_page_number + 1
+            print(f"new_page_number {new_page_number}")
             s = LazyRoomChatMessageEncoder()
             payload = s.serialize(p.page(new_page_number))
-            print(payload)
         else:
             payload = {}
         return payload, new_page_number, chat_room_user_list
@@ -148,6 +163,8 @@ class LazyRoomChatMessageEncoder(Serializer):
         dump_object.update({'primaryId': int(obj.id)})
         dump_object.update({'message': str(obj.content)})
         dump_object.update({'timestamp': str(obj.timestamp)})
+        if obj.chatAttachment:
+             dump_object.update({'chatAttachment': obj.chatAttachment})
         dump_object.update({'user': str(obj.user)})
         if obj.blocked_users:
             print(obj.blocked_users)
